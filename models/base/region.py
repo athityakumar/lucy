@@ -1,5 +1,6 @@
 from random import random
 
+
 class Region:
     def __init__(self, left=None, top=None, width=None, height=None, index=None):
         self.left = left

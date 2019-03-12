@@ -6,6 +6,7 @@ Lucy is a smart region proposer for existing Convolutional Neural Network (CNN) 
 
 ### TODOs
 
-- [ ] Isolate `GA` class methods from `Regions` class
-- [ ] Figure out a better architecture for easily changing fitness functions
-- [ ] Figure out how to handle mutations trying to overgrow original image
+- [x] Isolate `GA` class methods from `Regions` class
+- [x] Figure out a better architecture for easily changing fitness functions
+- [x] Figure out how to handle mutations trying to overgrow original image
+- [ ] Try out PSO-based region proposer

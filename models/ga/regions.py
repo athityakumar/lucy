@@ -38,15 +38,14 @@ class GA_Regions(Regions):
         df = pd.DataFrame(self.to_json())
         df['cum_sum'] = df.fitness.cumsum()
         df['cum_perc'] = df.cum_sum/df.fitness.sum()
-        
+
         for i in range(0, eliteSize):
             survivors.append(self[i])
-        
+
         for i in range(0, len(self) - eliteSize):
             pick = random()
             for i in range(0, len(self)):
-                # print(df.iat[i,7])
-                if pick <= df.iat[i,6]:
+                if pick <= df.iat[i, 6]:
                     survivors.append(self[i])
                     break
 
@@ -95,7 +94,7 @@ class GA_Regions(Regions):
         i = 0
         parents = self
         children = GA_Regions(self.image, self.popSize, random_init=False)
-        
+
         if (len(parents) % 2) == 1:
             parents = parents[:-1]
 
@@ -130,7 +129,9 @@ class GA_Regions(Regions):
 
         max_perturbation = min(self.image_width, self.image_height)/20
         for region in self:
-            generation.append(region.mutate(p_mut, max_perturbation, mu, sigma).sanitize(self.image_width, self.image_height))
+            mutated_region = region..mutate(p_mut, max_perturbation, mu, sigma)
+            sanitized_mutated_region = mutated_region.sanitize(self.image_width, self.image_height)
+            generation.append(sanitized_mutated_region)
 
         print("Mutation done")
         return(generation)

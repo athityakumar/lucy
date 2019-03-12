@@ -1,7 +1,6 @@
 from models.ga.regions import GA_Regions
 
 
-
 def propose_regions(img):
     regions = GA_Regions(img, popSize=500)
     proposals = regions.after_n_generations(10, 25, 0.05)
