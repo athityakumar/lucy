@@ -8,7 +8,7 @@
 
 #--- IMPORT DEPENDENCIES ------------------------------------------------------+
 
-from __future__ import division
+from __future__ import division, print_function
 import random
 import math
 
@@ -105,17 +105,17 @@ class PSO():
             i+=1
 
         # print final results
-        print 'FINAL:'
-        print pos_best_g
-        print err_best_g
+        print('FINAL:')
+        print(pos_best_g)
+        print(err_best_g)
 
 if __name__ == "__PSO__":
     main()
 
 #--- RUN ----------------------------------------------------------------------+
 
-initial=[5,5]               # initial starting location [x1,x2...]
-bounds=[(-10,10),(-10,10)]  # input bounds [(x1_min,x1_max),(x2_min,x2_max)...]
+initial=[5,5,0]               # initial starting location [x1,x2...]
+bounds=[(-10,10),(-10,10),(-20,20)]  # input bounds [(x1_min,x1_max),(x2_min,x2_max)...]
 PSO(func1,initial,bounds,num_particles=20,maxiter=10)
 
 #--- END ----------------------------------------------------------------------+

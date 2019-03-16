@@ -3,7 +3,7 @@ from random import random
 
 from models.base.regions import Regions
 from models.ga.region import GA_Region
-import models.misc.selective_search as ss
+import models.fitness.selective_search as ss
 
 
 class GA_Regions(Regions):
@@ -129,7 +129,7 @@ class GA_Regions(Regions):
 
         max_perturbation = min(self.image_width, self.image_height)/20
         for region in self:
-            mutated_region = region..mutate(p_mut, max_perturbation, mu, sigma)
+            mutated_region = region.mutate(p_mut, max_perturbation, mu, sigma)
             sanitized_mutated_region = mutated_region.sanitize(self.image_width, self.image_height)
             generation.append(sanitized_mutated_region)
 

@@ -74,3 +74,8 @@ class Region:
         if self.height > image_height:
             self.height = image_height - self.top
         return(self)
+
+    def contains_point(self, x, y):
+        contains_x = x < self.left and x > self.left+self.width
+        contains_y = y < self.top and y > self.top+self.height
+        return(contains_x and contains_y)
