@@ -18,9 +18,9 @@ def run_unit_script(approach_class, filename="cat_dog.jpg"):
 def run_batch_script(approach_class):
     filenames = [f for f in os.listdir(IMAGE_INPUT_DIR) if f.endswith(".jpg")]
     for filename in filenames:
-        run_main_script(approach_class, filename)
+        run_unit_script(approach_class, filename)
 
-run_unit_script(GA)
+run_batch_script(PSO)
 
 # Usage:
 # 

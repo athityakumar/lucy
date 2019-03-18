@@ -60,7 +60,7 @@ class Region:
             self.width = 0.0
         if self.width < 0:
             self.width = 0.0
-        if self.width > image_width:
+        if self.left + self.width > image_width:
             self.width = image_width - self.left
 
         if self.top < 0:
@@ -71,7 +71,7 @@ class Region:
             self.height = 0.0
         if self.height < 0:
             self.height = 0.0
-        if self.height > image_height:
+        if self.top + self.height > image_height:
             self.height = image_height - self.top
         return(self)
 

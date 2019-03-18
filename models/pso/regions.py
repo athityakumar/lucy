@@ -1,8 +1,12 @@
 import pandas as pd
 from random import random
+from copy import copy, deepcopy
 
 from models.base.regions import Regions
 from models.pso.region import PSO_Region
+
+import models.fitness.localization as loc
+import models.fitness.homogenous_uniformation as hu
 
 
 class PSO_Regions(Regions):
@@ -10,31 +14,59 @@ class PSO_Regions(Regions):
         self.image = image
         self.image_height, self.image_width, _ = image.shape
         self.popSize = popSize
-
-        self.gbest = 0.0
+        self.maxIterations = maxIterations
+        self.gbest_score = 0.0
 
         if random_init:
             for i in range(popSize):
                 r = PSO_Region(index=i)
-                r.randomize(self.image_width, self.image_height)
                 r.parent = self
+                r.randomize(self.image_width, self.image_height)
                 self.append(r)
 
-    def compute_fitness():
-        for region in self:
-            self.gbest = max(self.gbest, region.compute_fitness())
-        for region in self:
-            region.gbest = self.gbest
+        self.gbest = self[0]
+        self.pixel_wise_fitness = self.calc_pixel_wise_fitness()
 
-    def update_regions():
+    def calc_pixel_wise_fitness(self):
+        fit = []
+        for x in range(0, self.image_width):
+            fit_row = []
+            for y in range(0, self.image_height):
+                fit_row.append(loc.compute_fitness(self.image, self, x, y))
+            fit.append(fit_row)
+        return(fit)
+
+    def compute_fitness(self):
         for region in self:
-            region.update_velocity()
+            fit = region.compute_fitness()
+            if fit > self.gbest_score:
+                self.gbest_score = fit
+                self.gbest = region
+
+    def update_regions(self, w, c1, c2):
+        for region in self:
+            region.update_velocity(w, c1, c2)
             region.update_position()
+            # print("Before sanitize:")
+            # region.__repr__()
+            region.sanitize(self.image_width, self.image_height)
+            # print("After sanitize:")
+            # region.__repr__()
 
-    def fetch_candidates():
-        for i in range(maxIterations):
+    def fetch_candidates(self, w=1.0, c1=0.5, c2=0.5):
+        for i in range(self.maxIterations):
+            print("Generation {} computation started".format(i))
+            dynamic_w = w - 0.5 * i / self.maxIterations
+            # print(dynamic_w, c1, c2)
+
             for region in self:
                 self.compute_fitness()
-                self.update_regions()
+                self.update_regions(dynamic_w, c1, c2)
 
+            self.__repr__()
+            print("Generation {} computation ended".format(i))
         return(self)
+
+    def __repr__(self):
+        for region in self:
+            region.__repr__()

@@ -4,7 +4,6 @@ from models.ga.regions import GA_Regions
 class GA:
     def __init__(self, img):
         self.img = img
-        print(img[0][0])
         self.type = "ga"
 
     def propose_regions(self):
@@ -24,5 +23,4 @@ class GA:
                     continue
                 candidates.append(proposal.to_tuple())
 
-        # return(candidates, "ga")
         return(candidates)

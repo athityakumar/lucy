@@ -9,8 +9,12 @@ def local_fitness(particles, x, y):
     return(neighbours / len(particles))
 
 def punctual_fitness(img, x, y):
-    r, g, b = img[x][y]
+    r, g, b = img[y][x]
+    r = int(r)
+    g = int(g)
+    b = int(b)
+
     if ((abs(r-g) < 30) and (abs(r-b) > 60)):
-        return(30 - abs(r-g))
+        return(float(30 - abs(r-g)))
     else:
         return(0.0)
