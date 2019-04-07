@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import os
 
 
 def draw_proposal_boxes(img, proposals, save_as=None, dpi=500):
@@ -13,6 +14,9 @@ def draw_proposal_boxes(img, proposals, save_as=None, dpi=500):
         ax.add_patch(rect)
 
     if save_as:
+        save_as_dirs = "/".join(save_as.split("/")[:-1])
+        if not os.path.isdir(save_as_dirs):
+            os.makedirs(save_as_dirs)
         plt.savefig(save_as, bbox_inches='tight')
     else:
         plt.show()
