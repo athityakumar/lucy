@@ -2,36 +2,34 @@ from models.pso.regions import PSO_Regions
 
 
 class PSO:
+    """
+    Wrapper around the base PSO class, that proposes regions
+    based on the fitness value mentioned in selective search,
+    and does aspect-ratio-based filtering of regions as well.
+    """
+
     def __init__(self, img):
         self.img = img
         self.type = "pso"
+        self.img_height, self.img_width, _ = img.shape
+        self.img_size = self.img_width * self.img_height
 
     def propose_regions(self):
-        regions = PSO_Regions(self.img, popSize=200, maxIterations=5)
-        proposals = regions.fetch_candidates(w=1.0, c1=1, c2=1)
+        regions = PSO_Regions(self.img, popSize=300, maxIterations=5)
+        proposals = regions.fetch_candidates(w=1.0, c1=2.0, c2=2.0)
 
-        MAX_ASPECT_RATIO = [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
+        MIN_ASPECT_RATIO = 2.0
 
-        candidates = [proposal.to_tuple() for proposal in proposals]
-        # candidates = []
-        # for proposal in proposals:
-        #     if proposal.size() != 0:
-        #         candidates.append(proposal.to_tuple())
-
-        # for max_aspect_ratio in reversed(MAX_ASPECT_RATIO):
-        #     candidates = []
-        #     for proposal in proposals:
-        #         if not proposal.aspect_ratio():
-        #             continue
-
-        #         print(proposal.aspect_ratio(), 1.0/proposal.aspect_ratio(), proposal.size())
-
-        #         if proposal.aspect_ratio() > max_aspect_ratio or (1/proposal.aspect_ratio() > max_aspect_ratio):
-        #             continue
-        #         if proposal.size() < 60000:
-        #             continue
-
-        #         # proposal.__repr__()
-        #         candidates.append(proposal.to_tuple())
+        candidates = []
+        for proposal in proposals:
+            if not proposal.aspect_ratio():
+                continue
+            if proposal.aspect_ratio() > MIN_ASPECT_RATIO or (1/proposal.aspect_ratio() > MIN_ASPECT_RATIO):
+                continue
+            if proposal.size() < 0.05 * self.img_size:
+                continue
+            if proposal.left == 0.0 or proposal.top == 0.0 or proposal.bottom() == self.img_height or proposal.right() == self.img_width:
+                continue
+            candidates.append(proposal.to_tuple())
 
         return(candidates)

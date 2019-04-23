@@ -13,6 +13,15 @@ class Region:
     def size(self):
         return(self.width*self.height)
 
+    def right(self):
+        return(self.left+self.width)
+
+    def bottom(self):
+        return(self.top+self.height)
+
+    def perimeter(self):
+        return(2*(self.width + self.height))
+
     def aspect_ratio(self):
         if self.height == 0 or self.width == 0:
             return(None)

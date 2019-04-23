@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import os
+import datetime
+import time
 
 
 def draw_proposal_boxes(img, proposals, save_as=None, dpi=500):
@@ -20,3 +22,8 @@ def draw_proposal_boxes(img, proposals, save_as=None, dpi=500):
         plt.savefig(save_as, bbox_inches='tight')
     else:
         plt.show()
+
+def fetch_timestamp():
+    dt = datetime.datetime.today()
+    timestamp = int((time.mktime(dt.timetuple()) + dt.microsecond/1000000.0)*1000)
+    return(timestamp)

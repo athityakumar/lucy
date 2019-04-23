@@ -26,6 +26,7 @@ class PSO_Regions(Regions):
 
         self.gbest = self[0]
         self.pixel_wise_fitness = self.calc_pixel_wise_fitness()
+        self.__repr__(debug=True)
 
     def calc_pixel_wise_fitness(self):
         fit = []
@@ -46,10 +47,18 @@ class PSO_Regions(Regions):
     def update_regions(self, w, c1, c2):
         for region in self:
             region.update_velocity(w, c1, c2)
+        self.__repr__(debug=True, heading="After updating velocity")
+
+        for region in self:
             region.update_position()
+        self.__repr__(debug=True, heading="After updating position")
+
             # print("Before sanitize:")
             # region.__repr__()
+        for region in self:
             region.sanitize(self.image_width, self.image_height)
+        self.__repr__(debug=True, heading="After sanitize")
+
             # print("After sanitize:")
             # region.__repr__()
 
@@ -59,14 +68,19 @@ class PSO_Regions(Regions):
             dynamic_w = w - 0.5 * i / self.maxIterations
             # print(dynamic_w, c1, c2)
 
-            for region in self:
-                self.compute_fitness()
-                self.update_regions(dynamic_w, c1, c2)
+            self.compute_fitness()
+            self.__repr__(debug=True, heading="Before updating")
+            self.update_regions(dynamic_w, c1, c2)
 
-            self.__repr__()
             print("Generation {} computation ended".format(i))
         return(self)
 
-    def __repr__(self):
-        for region in self:
-            region.__repr__()
+    def __repr__(self, debug=False, heading=""):
+        print(heading)
+
+        if debug:
+            for region in self[0:5]:
+                region.__repr__()
+        else:
+            for region in self:
+                region.__repr__()

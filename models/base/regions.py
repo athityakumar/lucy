@@ -14,6 +14,3 @@ class Regions(list):
     def print_tuple(self):
         for region in self:
             print(region.to_tuple())
-
-    def size(self):
-        return(self.image_width*self.image_height)

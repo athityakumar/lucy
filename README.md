@@ -9,4 +9,9 @@ Lucy is a smart region proposer for existing Convolutional Neural Network (CNN) 
 - [x] Isolate `GA` class methods from `Regions` class
 - [x] Figure out a better architecture for easily changing fitness functions
 - [x] Figure out how to handle mutations trying to overgrow original image
-- [ ] Try out PSO-based region proposer
+- [x] Try out PSO-based region proposer
+  - [x] Add fitness function-1
+  - [ ] Add fitness function-2
+  - [x] Fix the velocity update sanitizer function
+- [ ] Write an evaluator script, that runs for whole corpus and integrates with CNN pipeline
+- [x] Write a CLI script, that makes it easy to run for a sample image
