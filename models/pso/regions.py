@@ -63,8 +63,9 @@ class PSO_Regions(Regions):
             # region.__repr__()
 
     def fetch_candidates(self, w=1.0, c1=0.5, c2=0.5):
+        print("Fetching proposals")
         for i in range(self.maxIterations):
-            print("Generation {} computation started".format(i))
+            # print("Generation {} computation started".format(i))
             dynamic_w = w - 0.5 * i / self.maxIterations
             # print(dynamic_w, c1, c2)
 
@@ -72,15 +73,17 @@ class PSO_Regions(Regions):
             self.__repr__(debug=True, heading="Before updating")
             self.update_regions(dynamic_w, c1, c2)
 
-            print("Generation {} computation ended".format(i))
+            # print("Generation {} computation ended".format(i))
         return(self)
 
     def __repr__(self, debug=False, heading=""):
-        print(heading)
+        return(0)
+        # print("")
+        # print(heading)
 
-        if debug:
-            for region in self[0:5]:
-                region.__repr__()
-        else:
-            for region in self:
-                region.__repr__()
+        # if debug:
+        #     for region in self[0:5]:
+        #         region.__repr__()
+        # else:
+        #     for region in self:
+        #         region.__repr__()

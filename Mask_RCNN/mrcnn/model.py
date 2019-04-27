@@ -19,11 +19,12 @@ import numpy as np
 import tensorflow as tf
 import keras
 import keras.backend as K
+# K.set_image_dim_ordering('th')
 import keras.layers as KL
 import keras.engine as KE
 import keras.models as KM
 
-from mrcnn import utils
+from Mask_RCNN.mrcnn import utils
 
 # Requires TensorFlow 1.3+ and Keras 2.0.8+.
 from distutils.version import LooseVersion
@@ -1629,7 +1630,7 @@ def generate_random_rois(image_shape, count, gt_class_ids, gt_boxes):
 
 def data_generator(dataset, config, shuffle=True, augment=False, augmentation=None,
                    random_rois=0, batch_size=1, detection_targets=False,
-                   no_augmentation_sources=None):
+                   no_augmentation_sources=None, roi_function=None):
     """A generator that returns images and corresponding target class ids,
     bounding box deltas, and masks.
 
@@ -1671,6 +1672,7 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
         and masks.
     """
     b = 0  # batch item index
+    g = 0
     image_index = -1
     image_ids = np.copy(dataset.image_ids)
     error_count = 0
@@ -1684,17 +1686,22 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                                              backbone_shapes,
                                              config.BACKBONE_STRIDES,
                                              config.RPN_ANCHOR_STRIDE)
+    batch_size=2
+    steps_per_epoch = len(image_ids)/batch_size
+    print("Batch size: {}".format(batch_size))
 
     # Keras requires a generator to run indefinitely.
+    # while g < steps_per_epoch:
     while True:
         try:
             # Increment index to pick next image. Shuffle if at the start of an epoch.
             image_index = (image_index + 1) % len(image_ids)
-            if shuffle and image_index == 0:
-                np.random.shuffle(image_ids)
+            # if shuffle and image_index == 0:
+            #     np.random.shuffle(image_ids)
 
             # Get GT bounding boxes and masks for image.
             image_id = image_ids[image_index]
+            print("Generating for image_id {}".format(image_id))
 
             # If the image source is not to be augmented pass None as augmentation
             if dataset.image_info[image_id]['source'] in no_augmentation_sources:
@@ -1722,12 +1729,20 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
             if random_rois:
                 rpn_rois = generate_random_rois(
                     image.shape, random_rois, gt_class_ids, gt_boxes)
-                print(rpn_rois)
+                # print(rpn_rois)
+                
+                # TODO: Change this to call GA/PSO functions
+                # rpn_rois = roi_function(image)
+                # while rpn_rois.shape[0] < 50:
+                #     rpn_rois += roi_function(image)[:50-rpn_rois.shape[0]]
+
+                # print("RPN ROIS", rpn_rois)
                 if detection_targets:
                     rois, mrcnn_class_ids, mrcnn_bbox, mrcnn_mask =\
                         build_detection_targets(
                             rpn_rois, gt_class_ids, gt_boxes, gt_masks, config)
-                    print(rois)
+                    # print(rois)
+
 
             # Init batch arrays
             if b == 0:
@@ -1783,7 +1798,8 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                     batch_mrcnn_bbox[b] = mrcnn_bbox
                     batch_mrcnn_mask[b] = mrcnn_mask
             b += 1
-
+            g += 1
+            print("b=", b)
             # Batch full?
             if b >= batch_size:
                 inputs = [batch_images, batch_image_meta, batch_rpn_match, batch_rpn_bbox,
@@ -1791,7 +1807,7 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                 outputs = []
 
                 if random_rois:
-                    inputs.extend([batch_rpn_rois])
+                    # inputs.extend([batch_rpn_rois])
                     if detection_targets:
                         inputs.extend([batch_rois])
                         # Keras requires that output and targets have the same number of dimensions
@@ -1800,8 +1816,8 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                         outputs.extend(
                             [batch_mrcnn_class_ids, batch_mrcnn_bbox, batch_mrcnn_mask])
 
+                print("Yielding: {} & {}".format(inputs, outputs))
                 yield inputs, outputs
-
                 # start a new batch
                 b = 0
         except (GeneratorExit, KeyboardInterrupt):
@@ -1976,7 +1992,7 @@ class MaskRCNN():
             if not config.USE_RPN_ROIS:
                 # Ignore predicted ROIs and use ROIs provided as an input.
                 input_rois = KL.Input(shape=[config.POST_NMS_ROIS_TRAINING, 4],
-                                      name="input_roi", dtype=np.int32)
+                                      name="input_roi", dtype=np.float32)
                 # Normalize coordinates
                 target_rois = KL.Lambda(lambda x: norm_boxes_graph(
                     x, K.shape(input_image)[1:3]))(input_rois)
@@ -2025,6 +2041,8 @@ class MaskRCNN():
                       input_rpn_match, input_rpn_bbox, input_gt_class_ids, input_gt_boxes, input_gt_masks]
             if not config.USE_RPN_ROIS:
                 inputs.append(input_rois)
+            print(len(inputs))
+
             outputs = [rpn_class_logits, rpn_class, rpn_bbox,
                        mrcnn_class_logits, mrcnn_class, mrcnn_bbox, mrcnn_mask,
                        rpn_rois, output_rois,
@@ -2063,6 +2081,7 @@ class MaskRCNN():
             from mrcnn.parallel_model import ParallelModel
             model = ParallelModel(model, config.GPU_COUNT)
 
+        # model.summary(line_length=400)
         return model
 
     def find_last(self):
@@ -2276,7 +2295,7 @@ class MaskRCNN():
             "*epoch*", "{epoch:04d}")
 
     def train(self, train_dataset, val_dataset, learning_rate, epochs, layers,
-              augmentation=None, custom_callbacks=None, no_augmentation_sources=None):
+              augmentation=None, custom_callbacks=None, no_augmentation_sources=None, roi_function=None):
         """Train the model.
         train_dataset, val_dataset: Training and validation Dataset objects.
         learning_rate: The learning rate to train with
@@ -2330,9 +2349,9 @@ class MaskRCNN():
                                          augmentation=augmentation,
                                          batch_size=self.config.BATCH_SIZE,
                                          no_augmentation_sources=no_augmentation_sources,
-                                         random_rois=1)
+                                         random_rois=1, roi_function=roi_function, detection_targets=True)
         val_generator = data_generator(val_dataset, self.config, shuffle=True,
-                                       batch_size=self.config.BATCH_SIZE, random_rois=1)
+                                       batch_size=self.config.BATCH_SIZE, random_rois=1, roi_function=roi_function, detection_targets=True)
 
         # Create log_dir if it does not exist
         if not os.path.exists(self.log_dir):
@@ -2356,6 +2375,7 @@ class MaskRCNN():
         self.set_trainable(layers)
         self.compile(learning_rate, self.config.LEARNING_MOMENTUM)
 
+        print("Compiled learning rate")
         # Work-around for Windows: Keras fails on Windows when using
         # multiprocessing workers. See discussion here:
         # https://github.com/matterport/Mask_RCNN/issues/13#issuecomment-353124009
@@ -2364,6 +2384,8 @@ class MaskRCNN():
         else:
             workers = multiprocessing.cpu_count()
 
+        print("Steps/epoch: ", self.config.STEPS_PER_EPOCH)
+        self.keras_model.output_names = ['output_%d' % (i + 1) for i in range(5)]
         self.keras_model.fit_generator(
             train_generator,
             initial_epoch=self.epoch,
