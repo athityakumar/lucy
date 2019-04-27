@@ -7,4 +7,6 @@ matplotlib
 argparse
 imgaug
 keras
+Cython
 pycocotools
+tensorflow
