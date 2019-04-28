@@ -25,7 +25,7 @@ class PSO_Regions(Regions):
                 self.append(r)
 
         self.gbest = self[0]
-        self.pixel_wise_fitness = self.calc_pixel_wise_fitness()
+        #self.pixel_wise_fitness = self.calc_pixel_wise_fitness()
         self.__repr__(debug=True)
 
     def calc_pixel_wise_fitness(self):

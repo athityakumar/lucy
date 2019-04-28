@@ -650,6 +650,7 @@ class DetectionTargetLayer(KE.Layer):
         self.config = config
 
     def call(self, inputs):
+        print("Calling")
         proposals = inputs[0]
         gt_class_ids = inputs[1]
         gt_boxes = inputs[2]
@@ -1675,6 +1676,7 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
     g = 0
     image_index = -1
     image_ids = np.copy(dataset.image_ids)
+    print(len(image_ids))
     error_count = 0
     no_augmentation_sources = no_augmentation_sources or []
 
@@ -1686,7 +1688,6 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                                              backbone_shapes,
                                              config.BACKBONE_STRIDES,
                                              config.RPN_ANCHOR_STRIDE)
-    batch_size=2
     steps_per_epoch = len(image_ids)/batch_size
     print("Batch size: {}".format(batch_size))
 
@@ -1727,12 +1728,12 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
 
             # Mask R-CNN Targets
             if random_rois:
-                rpn_rois = generate_random_rois(
-                    image.shape, random_rois, gt_class_ids, gt_boxes)
+                #rpn_rois = generate_random_rois(
+                #    image.shape, random_rois, gt_class_ids, gt_boxes)
                 # print(rpn_rois)
                 
                 # TODO: Change this to call GA/PSO functions
-                # rpn_rois = roi_function(image)
+                rpn_rois = roi_function(image)
                 # while rpn_rois.shape[0] < 50:
                 #     rpn_rois += roi_function(image)[:50-rpn_rois.shape[0]]
 
@@ -1816,7 +1817,7 @@ def data_generator(dataset, config, shuffle=True, augment=False, augmentation=No
                         outputs.extend(
                             [batch_mrcnn_class_ids, batch_mrcnn_bbox, batch_mrcnn_mask])
 
-                print("Yielding: {} & {}".format(inputs, outputs))
+                # print("Yielding: {} & {}".format(inputs, outputs))
                 yield inputs, outputs
                 # start a new batch
                 b = 0
@@ -2078,7 +2079,7 @@ class MaskRCNN():
 
         # Add multi-GPU support.
         if config.GPU_COUNT > 1:
-            from mrcnn.parallel_model import ParallelModel
+            from Mask_RCNN.mrcnn.parallel_model import ParallelModel
             model = ParallelModel(model, config.GPU_COUNT)
 
         # model.summary(line_length=400)
@@ -2322,8 +2323,8 @@ class MaskRCNN():
                     imgaug.augmenters.Fliplr(0.5),
                     imgaug.augmenters.GaussianBlur(sigma=(0.0, 5.0))
                 ])
-	    custom_callbacks: Optional. Add custom callbacks to be called
-	        with the keras fit_generator method. Must be list of type keras.callbacks.
+        custom_callbacks: Optional. Add custom callbacks to be called
+            with the keras fit_generator method. Must be list of type keras.callbacks.
         no_augmentation_sources: Optional. List of sources to exclude for
             augmentation. A source is string that identifies a dataset and is
             defined in the Dataset class.
@@ -2394,8 +2395,8 @@ class MaskRCNN():
             callbacks=callbacks,
             validation_data=val_generator,
             validation_steps=self.config.VALIDATION_STEPS,
-            max_queue_size=100,
-            workers=workers,
+            max_queue_size=20,
+            workers=2,
             use_multiprocessing=True,
         )
         self.epoch = max(self.epoch, epochs)
@@ -2515,6 +2516,7 @@ class MaskRCNN():
         scores: [N] float probability scores for the class IDs
         masks: [H, W, N] instance binary masks
         """
+        print("Yo")
         assert self.mode == "inference", "Create model in inference mode."
         assert len(
             images) == self.config.BATCH_SIZE, "len(images) must be equal to BATCH_SIZE"
@@ -2545,9 +2547,18 @@ class MaskRCNN():
             log("image_metas", image_metas)
             log("anchors", anchors)
         # Run object detection
-        detections, _, _, mrcnn_mask, _, _, _ =\
-            self.keras_model.predict([molded_images, image_metas, anchors], verbose=0)
+        #print("Molded images", molded_images)
+        #print("Image metas", image_metas)
+        #print("Anchors", anchors)
+        #detections, _, _, mrcnn_mask, _, _, _ =\
+        
+        res = self.keras_model.predict([molded_images, image_metas, anchors], verbose=1)
+        print("Predicted result:", len(res))
+        detections, _, _, mrcnn_mask, _, _, _ = res
+        
         # Process detections
+        import pdb
+        #pdb.set_trace()
         results = []
         for i, image in enumerate(images):
             final_rois, final_class_ids, final_scores, final_masks =\

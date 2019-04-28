@@ -15,7 +15,7 @@ class PSO:
         self.img_size = self.img_width * self.img_height
 
     def propose_regions(self, force=False):
-        regions = PSO_Regions(self.img, popSize=300, maxIterations=5)
+        regions = PSO_Regions(self.img, popSize=300, maxIterations=0)
         proposals = regions.fetch_candidates(w=1.0, c1=2.0, c2=2.0)
 
         MIN_ASPECT_RATIO = 2.0

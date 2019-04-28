@@ -63,13 +63,15 @@ import shutil
 # Import Mask RCNN
 # sys.path.append(ROOT_DIR)  # To find local version of the library
 from Mask_RCNN.mrcnn.config import Config
-from Mask_RCNN.mrcnn import model as modellib, utils
+from Mask_RCNN.mrcnn import model as modellib
+from Mask_RCNN.mrcnn.utils import Dataset
 
 import region_proposer
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 # Path to trained weights file
-COCO_MODEL_PATH = os.path.join("mask_rcnn_coco.h5")
-
+COCO_MODEL_PATH = os.path.join("/home/ubuntu/mask_rcnn_coco.h5")
+#COCO_MODEL_PATH = os.path.join("/home/ubuntu/lucy/logs/coco20190428T1321/mask_rcnn_coco_0001.h5")
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join("logs")
@@ -101,7 +103,6 @@ class CocoConfig(Config):
     NUM_CLASSES = 1 + 80  # COCO has 80 classes
     STEPS_PER_EPOCH = 1
     VALIDATION_STEPS = 1
-    BATCH_SIZE = 1 
     POOL_SIZE = 7
     USE_RPN_ROIS = False
     POST_NMS_ROIS_TRAINING = 200
@@ -110,7 +111,7 @@ class CocoConfig(Config):
 #  Dataset
 ############################################################
 
-class CocoDataset(utils.Dataset):
+class CocoDataset(Dataset):
     def load_coco(self, dataset_dir, subset, year=DEFAULT_DATASET_YEAR, class_ids=None,
                   class_map=None, return_coco=False, auto_download=False):
         """Load a subset of the COCO dataset.
@@ -128,6 +129,8 @@ class CocoDataset(utils.Dataset):
             self.auto_download(dataset_dir, subset, year)
 
         coco = COCO("{}/annotations/instances_{}{}.json".format(dataset_dir, subset, year))
+        print(len(coco.imgs.keys()))
+
         if subset == "minival" or subset == "valminusminival":
             subset = "val"
         image_dir = "{}/{}{}".format(dataset_dir, subset, year)
@@ -137,11 +140,13 @@ class CocoDataset(utils.Dataset):
             # All classes
             class_ids = sorted(coco.getCatIds())
 
-        # All images or a subset?
+        all_imgs = [i for i,k in enumerate(list(coco.imgs.keys()))]
+
+       # All images or a subset?
         if class_ids:
             image_ids = []
             for id in class_ids:
-                image_ids.extend(list(coco.getImgIds(catIds=[id])))
+                image_ids.extend(list(coco.getImgIds(imgIds=all_imgs, catIds=[id])))
             # Remove duplicates
             image_ids = list(set(image_ids))
         else:
@@ -152,9 +157,12 @@ class CocoDataset(utils.Dataset):
         for i in class_ids:
             self.add_class("coco", i, coco.loadCats(i)[0]["name"])
 
+        print("IDS:", len(image_ids))
         # Add images
         for i in image_ids:
+            #print("i", i)
             if os.path.isfile(os.path.join(image_dir, coco.imgs[i]['file_name'])):
+                #print("coco imgs[i]", coco.imgs[i])
                 self.add_image(
                     "coco", image_id=i,
                     path=os.path.join(image_dir, coco.imgs[i]['file_name']),
@@ -396,14 +404,19 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
     limit: if not 0, it's the number of images to use for evaluation
     """
     # Pick COCO images from the dataset
+    #print(dataset)
+    #print(coco)
     image_ids = image_ids or dataset.image_ids
-
+    
+    print(image_ids[:5])
     # Limit to a subset
     if limit:
         image_ids = image_ids[:limit]
 
     # Get corresponding COCO image IDs.
     coco_image_ids = [dataset.image_info[id]["id"] for id in image_ids]
+    #coco_image_ids = coco.getImgIds()
+    print(coco_image_ids[:5])
 
     t_prediction = 0
     t_start = time.time()
@@ -417,7 +430,7 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
         t = time.time()
         r = model.detect([image], verbose=0)[0]
         t_prediction += (time.time() - t)
-
+        print(len(r))
         # Convert results to COCO format
         # Cast masks to uint8 because COCO tools errors out on bool
         image_results = build_coco_results(dataset, coco_image_ids[i:i + 1],
@@ -477,8 +490,8 @@ def evaluate_coco(model, dataset, coco, eval_type="bbox", limit=0, image_ids=Non
 #                     type=bool)
 # args = parser.parse_args()
 
-args_dataset = "COCO_Dummy"
-args_command = "train"
+args_dataset = "/home/ubuntu/COCO_Dummy"
+args_command = "evaluate" #"train"
 # args_model = "imagenet"
 args_model = "coco"
 args_logs = "logs/"
@@ -503,6 +516,7 @@ else:
         GPU_COUNT = 1
         IMAGES_PER_GPU = 1
         DETECTION_MIN_CONFIDENCE = 0
+        STEPS_PER_EPOCH = 5
     config = InferenceConfig()
 config.display()
 
@@ -527,8 +541,9 @@ else:
     model_path = args_model
 
 # Load weights
-# print("Loading weights ", model_path)
-# model.load_weights(model_path, by_name=True)
+if not args_command == "train":
+    print("Loading weights ", model_path)
+    model.load_weights(model_path, by_name=True)
 
 # Train or evaluate
 if args_command == "train":
@@ -552,42 +567,58 @@ if args_command == "train":
 
     # *** This training schedule is an example. Update to your needs ***
 
+    early_stopping_callback = EarlyStopping(monitor='val_loss', patience=10)
+    #checkpoint_callback = ModelCheckpoint('20epochsdummydataset.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+
     # Training - Stage 1
     print("Training network heads")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=40,
+                epochs=20,
                 layers='heads',
                 augmentation=augmentation,
-                roi_function=region_proposer.mrcnn_proposals)
+                roi_function=region_proposer.mrcnn_proposals,
+                custom_callbacks=[early_stopping_callback])
 
     # Training - Stage 2
     # Finetune layers from ResNet stage 4 and up
     print("Fine tune Resnet stage 4 and up")
-    model.train(dataset_train, dataset_val,
+    try:
+        model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
                 epochs=120,
                 layers='4+',
                 augmentation=augmentation,
                 roi_function=region_proposer.mrcnn_proposals)
-
+    except Exception as e:
+        print(e)
     # Training - Stage 3
     # Fine tune all layers
     print("Fine tune all layers")
-    model.train(dataset_train, dataset_val,
+    try:
+        model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE / 10,
                 epochs=160,
                 layers='all',
                 augmentation=augmentation,
                 roi_function=region_proposer.mrcnn_proposals)
-
+    except Exception as e:
+       print(e)
 elif args_command == "evaluate":
     # Validation dataset
+    args_limit = 10
     dataset_val = CocoDataset()
+    #dataset_val2 = CocoDataset()
     # val_type = "val" if args_year in '2017' else "minival"
-    coco = dataset_val.load_coco(args_dataset, "test", year=args_year, return_coco=True, auto_download=args_download)
+    coco = dataset_val.load_coco(args_dataset, "val", year=args_year, return_coco=True, auto_download=args_download)
+    #dataset_val.load_coco(args_dataset, "test", year=args_year)
     dataset_val.prepare()
     print("Running COCO evaluation on {} images.".format(args_limit))
+    #dataset_val._image_ids = [i for i,k in enumerate(coco.imgs.keys())]
+    #pdb.set_trace()
+    import pdb
+    #pdb.set_trace()
+    #model.compile(learning_rate=config.LEARNING_RATE, momentum=config.LEARNING_MOMENTUM)
     evaluate_coco(model, dataset_val, coco, "bbox", limit=int(args_limit))
 else:
     print("'{}' is not recognized. "
